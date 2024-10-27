@@ -1,10 +1,11 @@
 const Stripe = require("stripe");
 const User = require("../models/User");
 const dotenv = require("dotenv");
+const config = require("../config/index");
 
 dotenv.config();
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = Stripe(config.STRIPE_SECRET_KEY);
 
 // Create Stripe Subscription
 exports.createSubscription = async (req, res) => {

@@ -3,12 +3,10 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const { Strategy: GitHubStrategy } = require("passport-github2");
-const dotenv = require("dotenv");
-
-dotenv.config();
+const config = require("../config/index");
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, config.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
