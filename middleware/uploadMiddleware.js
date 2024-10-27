@@ -1,11 +1,19 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const {
+  BadRequestError,
+  InternalServerError,
+} = require("../utils/customErrors");
 
 // Create an 'uploads' folder if it doesn't exist
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir); // Create the folder if it doesn't exist
+  try {
+    fs.mkdirSync(uploadDir); // Create the folder if it doesn't exist
+  } catch (error) {
+    throw new InternalServerError("Failed to create uploads directory");
+  }
 }
 
 // Set storage engine
@@ -26,10 +34,15 @@ const fileFilter = (req, file, cb) => {
     "application/pdf",
     "application/msword",
   ];
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only PDF, JPEG, PNG, and DOC files are allowed"), false);
+    // Use BadRequestError for unsupported file types
+    cb(
+      new BadRequestError("Only PDF, JPEG, PNG, and DOC files are allowed"),
+      false
+    );
   }
 };
 
@@ -38,6 +51,21 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter,
-});
+}).single("file"); // Assuming you're using 'file' as the field name for uploads
 
-module.exports = upload;
+// Middleware wrapper to handle multer errors consistently
+const uploadMiddleware = (req, res, next) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // Handle multer-specific errors (e.g., file size limit exceeded)
+      return next(new BadRequestError(err.message));
+    } else if (err) {
+      // Handle other unexpected errors
+      return next(new InternalServerError(err.message));
+    }
+
+    next();
+  });
+};
+
+module.exports = uploadMiddleware;

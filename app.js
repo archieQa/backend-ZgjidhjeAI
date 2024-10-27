@@ -21,25 +21,6 @@ app.use(apiLimiter);
 // Connect to MongoDB
 connectDB();
 
-app.get("/debug-sentry", function mainHandler(req, res) {
-  throw new Error("My first Sentry error!");
-});
-
-app.get("/manual-error", (req, res) => {
-  try {
-    // Simulate some code that can fail
-    if (Math.random() < 0.5) {
-      throw new Error("Simulated random error!");
-    } else {
-      JSON.parse("This is not JSON");
-    }
-  } catch (err) {
-    logger.error("Manual error triggered", { error: err });
-    Sentry.captureException(err); // Capture manually with Sentry
-    res.status(500).json({ success: false, message: "Manual error occurred" });
-  }
-});
-
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);

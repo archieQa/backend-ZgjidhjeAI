@@ -1,14 +1,18 @@
 const User = require("../models/User");
+const {
+  NotFoundError,
+  InternalServerError,
+  BadRequestError,
+} = require("../utils/customErrors");
 
 // Middleware to check AI usage limit based on user's plan
 const checkAiUsageLimit = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
 
+    // If user is not found, throw a NotFoundError
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      throw new NotFoundError("User not found");
     }
 
     // Check if 24 hours have passed since the last reset
@@ -32,11 +36,9 @@ const checkAiUsageLimit = async (req, res, next) => {
 
     // Check if user has tokens left (not for Premium Plan)
     if (user.plan !== "premium" && user.tokensLeft <= 0) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Daily token limit has been reached. Please try again tomorrow or upgrade your plan.",
-      });
+      throw new BadRequestError(
+        "Daily token limit has been reached. Please try again tomorrow or upgrade your plan."
+      );
     }
 
     // Deduct one token if not on the Premium Plan
@@ -48,7 +50,14 @@ const checkAiUsageLimit = async (req, res, next) => {
     // Proceed to the next middleware or route handler
     next();
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (error instanceof NotFoundError || error instanceof BadRequestError) {
+      return next(error); // Forward known operational errors
+    }
+
+    // Wrap other unexpected errors as InternalServerError
+    return next(
+      new InternalServerError("An error occurred while checking AI usage limit")
+    );
   }
 };
 

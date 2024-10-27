@@ -11,6 +11,7 @@ const {
   uploadFile,
 } = require("../controllers/userController");
 const upload = require("../middleware/uploadMiddleware");
+const uploadMiddleware = require("../middleware/uploadMiddleware");
 const router = express.Router();
 
 router.post("/use-ai", protect, checkAiUsageLimit, useAiService); // Use AI service
@@ -23,6 +24,6 @@ router.put("/:id", protect, updateData); // Update data by ID
 router.delete("/:id", protect, deleteData); // Delete data by ID
 
 // Upload file route
-router.post("/upload", protect, upload.single("file"), uploadFile);
+router.post("/upload", protect, uploadMiddleware, uploadFile);
 
 module.exports = router;

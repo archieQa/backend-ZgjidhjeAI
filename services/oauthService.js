@@ -4,6 +4,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const GitHubStrategy = require("passport-github2").Strategy;
 const User = require("../models/User");
 const config = require("../config/index");
+const { InternalServerError } = require("../utils/customErrors");
 
 // Initialize Google OAuth Client
 const googleClient = new OAuth2Client(config.GOOGLE_CLIENT_ID);
@@ -19,6 +20,8 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ googleId: profile.id });
+
+        // If the user does not exist, create a new one
         if (!user) {
           user = await User.create({
             username: profile.displayName,
@@ -27,9 +30,14 @@ passport.use(
             googleId: profile.id,
           });
         }
+
         done(null, user);
       } catch (error) {
-        done(error, false);
+        // Use a custom error for unexpected issues during authentication
+        done(
+          new InternalServerError("An error occurred during Google OAuth"),
+          false
+        );
       }
     }
   )
@@ -46,6 +54,8 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ githubId: profile.id });
+
+        // If the user does not exist, create a new one
         if (!user) {
           user = await User.create({
             username: profile.username,
@@ -54,9 +64,14 @@ passport.use(
             githubId: profile.id,
           });
         }
+
         done(null, user);
       } catch (error) {
-        done(error, false);
+        // Use a custom error for unexpected issues during authentication
+        done(
+          new InternalServerError("An error occurred during GitHub OAuth"),
+          false
+        );
       }
     }
   )

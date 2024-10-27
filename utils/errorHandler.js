@@ -1,11 +1,26 @@
+const { AppError } = require("../utils/customErrors");
+const Sentry = require("@sentry/node");
+const logger = require("../utils/logger");
+
 const errorHandler = (err, req, res, next) => {
-  console.log("Custom error handler invoked");
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode);
-  res.json({
+  const isOperational = err.isOperational || false;
+  const statusCode = err.statusCode || 500;
+
+  // Log the error
+  logger.error(err.message, { stack: err.stack });
+  Sentry.captureException(err);
+
+  // Send a structured error response
+  res.status(statusCode).json({
     success: false,
-    message: err.message,
-    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+    error: {
+      message: isOperational ? err.message : "An unexpected error occurred",
+      type: err.name,
+      code: statusCode,
+    },
+    // Hide stack trace in production for operational errors
+    stack:
+      process.env.NODE_ENV === "production" && isOperational ? null : err.stack,
   });
 };
 

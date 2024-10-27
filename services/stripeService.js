@@ -2,21 +2,31 @@ const Stripe = require("stripe");
 const User = require("../models/User");
 const dotenv = require("dotenv");
 const config = require("../config/index");
+const {
+  NotFoundError,
+  BadRequestError,
+  InternalServerError,
+} = require("../utils/customErrors");
 
 dotenv.config();
 
 const stripe = Stripe(config.STRIPE_SECRET_KEY);
 
 // Create Stripe Subscription
-exports.createSubscription = async (req, res) => {
+exports.createSubscription = async (req, res, next) => {
   const { plan } = req.body; // Expecting 'student' or 'premium'
 
   try {
     const user = await User.findById(req.user._id);
+
+    // If user is not found, throw a NotFoundError
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      throw new NotFoundError("User not found");
+    }
+
+    // Validate the plan input
+    if (!["student", "premium"].includes(plan)) {
+      throw new BadRequestError("Invalid plan selected");
     }
 
     // Define plan details
@@ -48,6 +58,15 @@ exports.createSubscription = async (req, res) => {
       clientSecret: subscription.latest_invoice.payment_intent.client_secret,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (error instanceof NotFoundError || error instanceof BadRequestError) {
+      return next(error); // Forward known operational errors
+    }
+
+    // Wrap other unexpected errors as InternalServerError
+    return next(
+      new InternalServerError(
+        "An error occurred while creating the subscription"
+      )
+    );
   }
 };
