@@ -1,108 +1,152 @@
-### `app.js`
+# SaaS Platform - Backend
 
-The main entry point of the application. It initializes the Express app, connects to the database, sets up routes, and starts the server.
+This project is a robust backend for a Software-as-a-Service (SaaS) platform. It includes features like user authentication, AI-based services, file handling, payment processing, and more. The backend is built with Node.js, Express, MongoDB, and integrated with Cloudinary for file storage. It uses Redis for caching, Swagger for API documentation, and Sentry for error monitoring.
 
-### `config/`
+## Table of Contents
 
-Contains configuration files.
+1. [Features](#features)
+2. [Technologies Used](#technologies-used)
+3. [Project Structure](#project-structure)
+4. [Installation](#installation)
+5. [Environment Variables](#environment-variables)
+6. [Running the Project](#running-the-project)
+7. [API Documentation](#api-documentation)
+8. [Testing](#testing)
+9. [Caching with Redis](#caching-with-redis)
+10. [Security Enhancements](#security-enhancements)
+11. [Deployment](#deployment)
+12. [Troubleshooting](#troubleshooting)
 
-- `config.js`: Database connection and other configuration settings.
+## Features
 
-### `controllers/`
+- **User Authentication**: Registration, login, and OAuth support with Google and GitHub.
+- **Token-Based Security**: Short-lived access tokens with refresh tokens.
+- **AI Service Integration**: Generate AI-based responses with usage tracking.
+- **File Handling**: File uploads managed through Cloudinary.
+- **Payment Integration**: Payment subscriptions via Stripe.
+- **API Documentation**: Comprehensive Swagger documentation for all endpoints.
+- **Caching**: Redis integration for caching frequently accessed data.
+- **Error Monitoring**: Sentry integration for tracking and managing errors.
+- **Robust Security**: Includes rate limiting, input validation, security headers, and Content Security Policy (CSP).
 
-Contains controller files that handle the logic for different routes.
+## Technologies Used
 
-- `authController.js`: Handles user authentication.
-- `userController.js`: Manages user data and interactions.
+- **Node.js**: JavaScript runtime for backend logic.
+- **Express**: Web framework for building APIs.
+- **MongoDB**: NoSQL database for data storage.
+- **Mongoose**: ODM for MongoDB.
+- **Redis**: In-memory data structure store for caching.
+- **Cloudinary**: Cloud-based image and file storage.
+- **Stripe**: Payment processing platform.
+- **Passport**: Middleware for OAuth authentication.
+- **Jest**: Testing framework.
+- **Supertest**: HTTP assertions for Node.js.
+- **Swagger**: API documentation tool.
+- **Sentry**: Error monitoring service.
+- **Helmet**: Middleware for securing HTTP headers.
 
-### `middleware/`
+## Project Structure
 
-Contains middleware functions that process requests before they reach the controllers.
+. ├── config/ │ ├── cloudinaryConfig.js # Cloudinary configuration │ ├── index.js # Environment configuration loader │ ├── redisConfig.js # Redis configuration │ └── swaggerConfig.js # Swagger documentation configuration ├── controllers/ │ ├── authController.js # Authentication logic │ └── userController.js # User-related operations ├── middleware/ │ ├── asyncHandler.js # Middleware for async error handling │ ├── authMiddleware.js # Authentication middleware │ ├── rateLimiter.js # API rate limiting middleware │ ├── uploadMiddleware.js # File upload handling │ └── validateRequest.js # Input validation middleware ├── models/ │ ├── Data.js # Data schema for storing user data │ └── User.js # User schema ├── routes/ │ ├── authRoutes.js # Routes for authentication │ ├── paymentRoutes.js # Routes for payment handling │ └── userRoutes.js # Routes for user-related operations ├── services/ │ ├── oauthService.js # OAuth service configuration │ └── stripeService.js # Stripe payment service logic ├── tests/ │ ├── authController.test.js # Unit tests for authentication │ └── userController.test.js # Unit tests for user data ├── utils/ │ ├── customErrors.js # Custom error classes │ ├── errorHandler.js # Centralized error handler │ └── logger.js # Winston logger setup ├── .env # Environment variables (not included in repo) ├── app.js # Main entry point ├── package.json # Project metadata and dependencies └── README.md # Project documentation
 
-- `aiUsageMiddleware.js`: Checks AI usage limits.
-- `authMiddleware.js`: Protects routes by requiring authentication.
-- `uploadMiddleware.js`: Handles file uploads using Multer.
+bash
+Copy code
 
-### `models/`
+## Installation
 
-Contains Mongoose models for MongoDB collections.
+1. **Clone the repository**:
 
-- `Data.js`: Schema for user data.
-- `User.js`: Schema for user information.
+   ```bash
+   git clone https://github.com/yourusername/your-repo-name.git
+   cd your-repo-name
+   Install dependencies:
+   ```
 
-### `routes/`
+bash
+Copy code
+npm install
+Install Redis (optional if you want to run caching locally):
 
-Contains route definitions.
+bash
+Copy code
+docker run --name redis-server -d -p 6379:6379 redis
+Environment Variables
+Create a .env file in the root directory and configure the following environment variables:
 
-- `authRoutes.js`: Routes for authentication.
-- `paymentRoutes.js`: Routes for payment processing.
-- `userRoutes.js`: Routes for user-related operations.
+plaintext
+Copy code
+NODE_ENV=development
+PORT=5000
 
-### `services/`
+# MongoDB
 
-Contains service files for external integrations.
+MONGO_URI=your_mongodb_uri
 
-- `oauthService.js`: Handles OAuth authentication.
-- `stripeService.js`: Manages Stripe payment processing.
+# JWT Secrets
 
-### `uploads/`
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_jwt_secret
 
-Directory for storing uploaded files.
+# Cloudinary
 
-### `utils/`
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-Contains utility functions.
+# Redis
 
-- `errorHandler.js`: Custom error handler middleware.
-- `hashUtil.js`: Utility for hashing passwords.
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password_if_required
 
-## Routes
+# Stripe
 
-### Authentication Routes
+STRIPE_SECRET_KEY=your_stripe_secret_key
 
-- `POST /api/auth/login`: User login.
-- `POST /api/auth/register`: User registration.
+# Sentry
 
-### User Routes
+SENTRY_DSN=your_sentry_dsn
 
-- `POST /api/user/`: Create new data.
-- `GET /api/user/`: Get user data.
-- `PUT /api/user/:id`: Update data by ID.
-- `DELETE /api/user/:id`: Delete data by ID.
-- `POST /api/user/use-ai`: Use AI service.
-- `PUT /api/user/update-plan`: Update user plan.
-- `POST /api/user/upload`: Upload a file.
+## Running the Project
 
-### Payment Routes
+1. **Start the server**:
 
-- `POST /api/payment/charge`: Process a payment.
+   ```bash
+   npm start
+   Access API Documentation:
+   ```
 
-## Middleware
+## Access API Documentation
 
-- `authMiddleware.js`: Protects routes by requiring authentication.
-- `aiUsageMiddleware.js`: Checks AI usage limits.
-- `uploadMiddleware.js`: Handles file uploads using Multer.
+- Go to `http://localhost:5000/api-docs` to view the Swagger documentation.
 
-## Controllers
+## API Documentation
 
-- `authController.js`: Handles user authentication.
-- `userController.js`: Manages user data and interactions.
+The API documentation is generated using Swagger. To view it:
 
-## Models
+- Navigate to `http://localhost:5000/api-docs`.
 
-- `Data.js`: Schema for user data.
-- `User.js`: Schema for user information.
+### Key Endpoints
 
-## Services
+#### **Authentication**
 
-- `oauthService.js`: Handles OAuth authentication.
-- `stripeService.js`: Manages Stripe payment processing.
+- **POST** `/api/auth/register`: Register a new user.
+- **POST** `/api/auth/login`: Login an existing user.
 
-## Utilities
+#### **User Operations**
 
-- `errorHandler.js`: Custom error handler middleware.
-- `hashUtil.js`: Utility for hashing passwords.
+- **GET** `/api/user`: Retrieve user data.
+- **POST** `/api/user/upload`: Upload a file.
+- **PUT** `/api/user/update-plan`: Update user subscription plan.
 
-## License
+#### **Payments**
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- **POST** `/api/payment/subscribe`: Subscribe to a plan using Stripe.
+
+## Testing
+
+Run tests using `Jest`:
+
+```bash
+npm test
+```
