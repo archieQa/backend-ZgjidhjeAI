@@ -4,8 +4,6 @@ const config = require("./index");
 const connectDB = async (retries = 5, delay = 3000) => {
   try {
     await mongoose.connect(config.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       maxPoolSize: 10, // Max number of connections in the connection pool
     });
     console.log("MongoDB connected successfully");

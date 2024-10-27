@@ -5,6 +5,7 @@ module.exports = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+  SENTRY_DSN: process.env.SENTRY_DSN,
   NODE_ENV: "development",
   PORT: process.env.PORT || 5000,
 };
