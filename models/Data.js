@@ -20,11 +20,16 @@ const DataSchema = new mongoose.Schema({
     originalName: { type: String },
     mimeType: { type: String },
     size: { type: Number },
+    cloudinaryId: { type: String },
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+// Index userId for faster query performance
+
+DataSchema.index({ userId: 1 });
 
 module.exports = mongoose.model("Data", DataSchema);

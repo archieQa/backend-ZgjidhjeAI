@@ -4,11 +4,8 @@ const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const { Strategy: GitHubStrategy } = require("passport-github2");
 const config = require("../config/index");
-const {
-  InternalServerError,
-  BadRequestError,
-  UnauthorizedError,
-} = require("../utils/customErrors");
+const { BadRequestError, UnauthorizedError } = require("../utils/customErrors");
+const asyncHandler = require("../middleware/asyncHandler");
 
 const generateToken = (id) => {
   return jwt.sign({ id }, config.JWT_SECRET, {
@@ -17,66 +14,53 @@ const generateToken = (id) => {
 };
 
 // Register User
-exports.registerUser = async (req, res, next) => {
+exports.registerUser = asyncHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
-  try {
-    // Validate user input
-    if (!username || !email || !password) {
-      throw new BadRequestError("Username, email, and password are required");
-    }
 
-    const user = new User({ username, email, password });
-    await user.save();
-
-    res.status(201).json({
-      success: true,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    if (error.name === "ValidationError") {
-      // MongoDB/Mongoose validation errors should be treated as bad requests
-      return next(new BadRequestError(error.message));
-    }
-
-    // For other unexpected errors, wrap them as InternalServerError
-    return next(
-      new InternalServerError("An error occurred while registering the user")
-    );
+  // Validate user input
+  if (!username || !email || !password) {
+    throw new BadRequestError("Username, email, and password are required");
   }
-};
+
+  // Check if username or email already exists
+  const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+  if (existingUser) {
+    throw new BadRequestError("Email or username already exists");
+  }
+
+  // Create and save the new user
+  const user = new User({ username, email, password });
+  await user.save();
+
+  // Return success response with token
+  res.status(201).json({
+    success: true,
+    token: generateToken(user._id),
+  });
+});
 
 // Login User
-exports.loginUser = async (req, res, next) => {
+exports.loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-  try {
-    // Validate user input
-    if (!email || !password) {
-      throw new BadRequestError("Email and password are required");
-    }
 
-    const user = await User.findOne({ email });
-
-    // Check if user exists and password matches
-    if (!user || !(await user.matchPassword(password))) {
-      throw new UnauthorizedError("Invalid email or password");
-    }
-
-    res.json({
-      success: true,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    if (
-      error instanceof BadRequestError ||
-      error instanceof UnauthorizedError
-    ) {
-      return next(error); // Forward known operational errors
-    }
-
-    // Wrap other unexpected errors as InternalServerError
-    return next(new InternalServerError("An error occurred while logging in"));
+  // Validate user input
+  if (!email || !password) {
+    throw new BadRequestError("Email and password are required");
   }
-};
+
+  const user = await User.findOne({ email });
+
+  // Check if user exists and password matches
+  if (!user || !(await user.matchPassword(password))) {
+    throw new UnauthorizedError("Invalid email or password");
+  }
+
+  // Return success response with token
+  res.json({
+    success: true,
+    token: generateToken(user._id),
+  });
+});
 
 // OAuth Logic (Placeholder - To be expanded later)
 exports.googleOAuth = async (req, res) => {

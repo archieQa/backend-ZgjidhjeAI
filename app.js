@@ -10,6 +10,8 @@ const config = require("./config/index");
 const apiLimiter = require("./middleware/rateLimiter");
 const logger = require("./utils/logger");
 const Sentry = require("@sentry/node");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocs = require("./config/swaggerConfig");
 
 // Initialize Express
 const app = express();
@@ -22,6 +24,7 @@ app.use(apiLimiter);
 connectDB();
 
 // Routes
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/payment", paymentRoutes);
