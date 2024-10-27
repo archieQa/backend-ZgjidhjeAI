@@ -44,6 +44,29 @@ exports.createData = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: insertedData });
 });
 
+// Get all data
+exports.getUserProfile = asyncHandler(async (req, res) => {
+  // Define a cache key based on the user ID
+  const cacheKey = `userProfile:${req.user._id}`;
+  let profile = await redisClient.get(cacheKey);
+
+  if (profile) {
+    // If profile data is in cache, parse and return it
+    profile = JSON.parse(profile);
+  } else {
+    // If not cached, fetch from database and cache it
+    profile = await User.findById(req.user._id).select("-password").lean();
+    if (!profile) {
+      throw new NotFoundError("User profile not found");
+    }
+
+    // Cache the profile data for 10 minutes
+    await redisClient.set(cacheKey, JSON.stringify(profile), "EX", 600);
+  }
+
+  res.status(200).json({ success: true, profile });
+});
+
 // Get all user data
 exports.getUserData = asyncHandler(async (req, res) => {
   // Check if the data is in cache
@@ -119,19 +142,44 @@ exports.deleteData = asyncHandler(async (req, res) => {
 
 // Use AI service
 exports.useAiService = asyncHandler(async (req, res) => {
-  // Perform the AI service operation (e.g., generate AI response)
-  const aiResponse = "This is the generated AI response"; // Example response
+  const aiUsageCacheKey = `aiUsage:${req.user._id}`;
 
-  // Find the user and increment AI usage count
-  const user = await User.findById(req.user._id);
+  // Get the user data from cache
+  let user = await redisClient.get(aiUsageCacheKey);
+  let isFromCache = false;
 
-  // If user is not found, throw a NotFoundError
-  if (!user) {
-    throw new NotFoundError("User not found");
+  if (user) {
+    // Parse the user data from cache
+    user = JSON.parse(user);
+    isFromCache = true;
+  } else {
+    // If not in cache, fetch from the database
+    user = await User.findById(req.user._id);
+
+    // If user is not found, throw a NotFoundError
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
   }
 
+  // Increment AI usage count
   user.aiUsageCount += 1;
-  await user.save();
+
+  // If the user data is from cache, update the database directly
+  if (isFromCache) {
+    await User.findByIdAndUpdate(req.user._id, {
+      aiUsageCount: user.aiUsageCount,
+    });
+  } else {
+    // If it's from the database, use the save method
+    await user.save();
+  }
+
+  // Refresh the cache after updating AI usage
+  await redisClient.set(aiUsageCacheKey, JSON.stringify(user), "EX", 600);
+
+  // Example AI response for demonstration purposes
+  const aiResponse = "This is the generated AI response";
 
   res.status(200).json({ success: true, response: aiResponse });
 });
@@ -194,6 +242,8 @@ exports.uploadFile = asyncHandler(async (req, res) => {
     },
   });
 
+  const fileCacheKey = `fileData:${newFile._id}`;
+  await redisClient.set(fileCacheKey, JSON.stringify(newFile), "EX", 600); // Cache for 10 minutes
   await newFile.save();
 
   res.status(201).json({ success: true, data: newFile });

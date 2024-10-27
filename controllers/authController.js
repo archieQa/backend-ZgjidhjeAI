@@ -7,9 +7,16 @@ const config = require("../config/index");
 const { BadRequestError, UnauthorizedError } = require("../utils/customErrors");
 const asyncHandler = require("../middleware/asyncHandler");
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, config.JWT_SECRET, {
-    expiresIn: "30d",
+const generateToken = (id, expiresIn = "1h") => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn, // Use a shorter token expiration
+  });
+};
+
+// Generate refresh token
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: "7d", // Refresh token lasts 7 days
   });
 };
 
@@ -40,26 +47,22 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
 });
 
 // Login User
-exports.loginUser = asyncHandler(async (req, res, next) => {
+exports.loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
-  // Validate user input
-  if (!email || !password) {
-    throw new BadRequestError("Email and password are required");
-  }
-
   const user = await User.findOne({ email });
 
-  // Check if user exists and password matches
-  if (!user || !(await user.matchPassword(password))) {
-    throw new UnauthorizedError("Invalid email or password");
-  }
+  if (user && (await user.matchPassword(password))) {
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
-  // Return success response with token
-  res.json({
-    success: true,
-    token: generateToken(user._id),
-  });
+    res.json({
+      success: true,
+      accessToken,
+      refreshToken,
+    });
+  } else {
+    throw new UnauthorizedError("Invalid credentials");
+  }
 });
 
 // OAuth Logic (Placeholder - To be expanded later)

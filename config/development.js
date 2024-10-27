@@ -11,6 +11,7 @@ module.exports = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: process.env.REDIS_PORT,
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   NODE_ENV: "development",
   PORT: process.env.PORT || 5000,
 };

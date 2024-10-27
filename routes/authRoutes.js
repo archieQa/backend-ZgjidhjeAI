@@ -2,7 +2,8 @@ const express = require("express");
 const passport = require("../services/oauthService");
 const { registerUser, loginUser } = require("../controllers/authController");
 const { InternalServerError } = require("../utils/customErrors");
-
+const { body } = require("express-validator");
+const validateRequest = require("../middleware/validateRequest");
 const router = express.Router();
 
 // Local authentication routes
@@ -36,7 +37,69 @@ const router = express.Router();
  *       400:
  *         description: Bad request
  */
-router.post("/register", registerUser);
+router.post(
+  "/register",
+  [
+    // Username validation: 3-20 characters, alphanumeric, trimmed
+    body("username")
+      .trim()
+      .isLength({ min: 3, max: 20 })
+      .withMessage("Username must be between 3 and 20 characters")
+      .isAlphanumeric()
+      .withMessage("Username can only contain letters and numbers"),
+
+    // Email validation: must be a valid email, sanitized
+    body("email")
+      .isEmail()
+      .withMessage("Invalid email address")
+      .normalizeEmail(), // Normalizes email (e.g., removes dots from Gmail)
+
+    // Password validation: 8-30 characters, must include uppercase, lowercase, number, and symbol
+    body("password")
+      .isLength({ min: 8, max: 30 })
+      .withMessage("Password must be between 8 and 30 characters")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain at least one lowercase letter")
+      .matches(/\d/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[\W_]/)
+      .withMessage("Password must contain at least one special character"),
+
+    // Additional sanitization
+    body("username").escape(), // Escape any HTML characters
+    body("email").escape(),
+    body("password").escape(),
+  ],
+  validateRequest([
+    body("username")
+      .trim()
+      .isLength({ min: 3, max: 20 })
+      .withMessage("Username must be between 3 and 20 characters")
+      .isAlphanumeric()
+      .withMessage("Username can only contain letters and numbers"),
+    body("email")
+      .isEmail()
+      .withMessage("Invalid email address")
+      .normalizeEmail(),
+    body("password")
+      .isLength({ min: 8, max: 30 })
+      .withMessage("Password must be between 8 and 30 characters")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain at least one lowercase letter")
+      .matches(/\d/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[\W_]/)
+      .withMessage("Password must contain at least one special character"),
+    body("username").escape(),
+    body("email").escape(),
+    body("password").escape(),
+  ]),
+  registerUser
+);
 
 /**
  * @swagger

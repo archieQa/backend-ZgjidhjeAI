@@ -12,11 +12,22 @@ const logger = require("./utils/logger");
 const Sentry = require("@sentry/node");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocs = require("./config/swaggerConfig");
-
+const helmet = require("helmet");
 // Initialize Express
 const app = express();
 app.use(express.json());
 
+app.use(helmet()); // Add security headers
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://trusted-cdn.com"], // Allow scripts only from trusted sources
+      styleSrc: ["'self'", "https://trusted-cdn.com"],
+      imgSrc: ["'self'", "data:", "https://trusted-cdn.com"], // Allow images from trusted sources
+    },
+  })
+);
 // Apply rate limiting to all routes
 app.use(apiLimiter);
 

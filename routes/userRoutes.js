@@ -9,6 +9,7 @@ const {
   useAiService,
   updateUserPlan,
   uploadFile,
+  getUserProfile,
 } = require("../controllers/userController");
 const upload = require("../middleware/uploadMiddleware");
 const uploadMiddleware = require("../middleware/uploadMiddleware");
@@ -89,6 +90,21 @@ router.put("/update-plan", protect, updateUserPlan); // Update user plan
  *         description: Bad request
  */
 router.post("/", protect, createData); // Create new data
+/**
+ * @swagger
+ * /api/user/profile:
+ *   get:
+ *     summary: Retrieve user profile
+ *     tags: [User Data]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile data
+ *       400:
+ *         description: Bad request
+ */
+router.get("/profile", protect, getUserProfile); // Add route for fetching user profile
 /**
  * @swagger
  * /api/user:
