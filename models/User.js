@@ -51,6 +51,12 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     default: 5, // Tokens left for the current day
   },
+  profilePictureUrl: {
+    type: String,
+  },
+  profilePictureId: {
+    type: String,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

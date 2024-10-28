@@ -10,10 +10,58 @@ const {
   updateUserPlan,
   uploadFile,
   getUserProfile,
+  deleteProfilePicture,
+  uploadProfilePicture,
 } = require("../controllers/userController");
 const upload = require("../middleware/uploadMiddleware");
 const uploadMiddleware = require("../middleware/uploadMiddleware");
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/user/profile-picture/upload:
+ *   post:
+ *     summary: Upload profile picture
+ *     tags: [User Data]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *       400:
+ *         description: Bad request
+ */
+router.post(
+  "/profile-picture/upload",
+  protect,
+  uploadMiddleware,
+  uploadProfilePicture
+);
+/**
+ * @swagger
+ * /api/user/profile-picture:
+ *   delete:
+ *     summary: Delete profile picture
+ *     tags: [User Data]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile picture deleted successfully
+ *       404:
+ *         description: Profile picture not found
+ */
+router.delete("/profile-picture", protect, deleteProfilePicture);
 
 /**
  * @swagger

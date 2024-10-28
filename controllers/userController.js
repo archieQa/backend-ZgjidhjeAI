@@ -44,27 +44,83 @@ exports.createData = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: insertedData });
 });
 
-// Get all data
+// Get user profile
+
+// userController.js
+
 exports.getUserProfile = asyncHandler(async (req, res) => {
-  // Define a cache key based on the user ID
   const cacheKey = `userProfile:${req.user._id}`;
   let profile = await redisClient.get(cacheKey);
 
   if (profile) {
-    // If profile data is in cache, parse and return it
     profile = JSON.parse(profile);
   } else {
-    // If not cached, fetch from database and cache it
-    profile = await User.findById(req.user._id).select("-password").lean();
-    if (!profile) {
+    const user = await User.findById(req.user._id)
+      .select("username email tokensLeft profilePictureUrl plan lastReset")
+      .lean();
+
+    if (!user) {
       throw new NotFoundError("User profile not found");
     }
 
-    // Cache the profile data for 10 minutes
-    await redisClient.set(cacheKey, JSON.stringify(profile), "EX", 600);
+    if (user.plan === "premium") {
+      user.tokensLeft = "Infinite Tokens";
+      user.nextRefillTime = "You don't need token refill; you're rich!";
+    } else {
+      // Calculate exact time remaining until next refill
+      const now = new Date();
+      const nextRefillTimestamp =
+        user.lastReset.getTime() + 24 * 60 * 60 * 1000;
+      const timeUntilRefill = nextRefillTimestamp - now;
+
+      if (timeUntilRefill > 0) {
+        const hoursUntilRefill = Math.floor(timeUntilRefill / (1000 * 60 * 60));
+        const minutesUntilRefill = Math.floor(
+          (timeUntilRefill % (1000 * 60 * 60)) / (1000 * 60)
+        );
+
+        user.nextRefillTime = `Your tokens will be refilled in ${hoursUntilRefill} hours and ${minutesUntilRefill} minutes.`;
+      } else {
+        user.nextRefillTime = "Your tokens have been refilled.";
+      }
+    }
+
+    const userData = await Data.find({ userId: req.user._id }).lean();
+    const files = userData
+      .filter((data) => data.type === "file")
+      .map((file) => ({
+        id: file._id,
+        content: file.content,
+        fileInfo: file.fileInfo,
+        createdAt: file.createdAt,
+      }));
+    const aiAnswers = userData
+      .filter((data) => data.type === "ai_answer")
+      .map((answer) => ({
+        id: answer._id,
+        content: answer.content,
+        createdAt: answer.createdAt,
+      }));
+
+    profile = {
+      username: user.username,
+      email: user.email,
+      tokensLeft: user.tokensLeft,
+      plan: user.plan,
+      nextRefillTime: user.nextRefillTime,
+      profilePictureUrl: user.profilePictureUrl,
+      files,
+      aiAnswers,
+    };
+
+    // Cache the profile data with a short expiration time
+    await redisClient.set(cacheKey, JSON.stringify(profile), "EX", 60); // Cache for 1 minute
   }
 
-  res.status(200).json({ success: true, profile });
+  res.status(200).json({
+    success: true,
+    profile,
+  });
 });
 
 // Get all user data
@@ -247,4 +303,60 @@ exports.uploadFile = asyncHandler(async (req, res) => {
   await newFile.save();
 
   res.status(201).json({ success: true, data: newFile });
+});
+
+// Upload Profile Picture
+exports.uploadProfilePicture = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new BadRequestError("No file uploaded");
+  }
+
+  // Get the current user
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  // Upload to Cloudinary and store the cloudinaryId
+  const result = await cloudinary.uploader.upload(req.file.path, {
+    folder: "profile_pictures",
+  });
+
+  // If user has a previous profile picture, delete it from Cloudinary
+  if (user.profilePictureId) {
+    await cloudinary.uploader.destroy(user.profilePictureId);
+  }
+
+  // Update user document
+  user.profilePictureUrl = result.secure_url;
+  user.profilePictureId = result.public_id;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Profile picture uploaded successfully",
+    profilePictureUrl: user.profilePictureUrl,
+  });
+});
+
+// Delete Profile Picture
+exports.deleteProfilePicture = asyncHandler(async (req, res) => {
+  // Get the current user
+  const user = await User.findById(req.user._id);
+  if (!user || !user.profilePictureId) {
+    throw new NotFoundError("Profile picture not found");
+  }
+
+  // Delete from Cloudinary
+  await cloudinary.uploader.destroy(user.profilePictureId);
+
+  // Remove from user document
+  user.profilePictureUrl = undefined;
+  user.profilePictureId = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Profile picture deleted successfully",
+  });
 });

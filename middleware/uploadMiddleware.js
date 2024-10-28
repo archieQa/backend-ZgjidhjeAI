@@ -6,18 +6,37 @@ const {
   InternalServerError,
 } = require("../utils/customErrors");
 const asyncHandler = require("./asyncHandler");
-const { storage } = require("../config/cloudinaryConfig");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
 
 // Create an 'uploads' folder if it doesn't exist
 const uploadDir = path.join(__dirname, "../uploads");
 
 // Use fs.promises to create the folder asynchronously
 fs.promises.mkdir(uploadDir, { recursive: true }).catch(() => {
-  throw new InternalServerError("Failed to create upload directory"); // Handle error
+  throw new InternalServerError("Failed to create upload directory");
 });
 
-// File filter for PDF, images, and documents
+// Dynamic storage based on URL
+const getStorage = (req) => {
+  const folder = req.url.includes("profile-picture/upload")
+    ? "profile_pictures"
+    : "files";
+
+  return new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder, // Dynamic folder based on URL
+      allowed_formats: req.url.includes("profile-picture/upload")
+        ? ["jpg", "jpeg", "png"] // Only images for profile pictures
+        : ["jpg", "jpeg", "png", "pdf", "doc"], // Allow more types for general uploads
+    },
+  });
+};
+
+// File filter with conditions for different file types
 const fileFilter = (req, file, cb) => {
+  const profilePictureTypes = ["image/jpeg", "image/png"];
   const allowedTypes = [
     "image/jpeg",
     "image/png",
@@ -25,26 +44,39 @@ const fileFilter = (req, file, cb) => {
     "application/msword",
   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
+  if (req.url.includes("profile-picture/upload")) {
+    // Only allow JPEG and PNG for profile pictures
+    if (profilePictureTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new BadRequestError(
+          "Only JPEG and PNG files are allowed for profile pictures"
+        ),
+        false
+      );
+    }
   } else {
-    // Use BadRequestError for unsupported file types
-    cb(
-      new BadRequestError("Only PDF, JPEG, PNG, and DOC files are allowed"),
-      false
-    );
+    // General file uploads filter
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new BadRequestError("Only PDF, JPEG, PNG, and DOC files are allowed"),
+        false
+      );
+    }
   }
 };
 
-// Initialize Multer with file size limit of 5MB
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter,
-}).single("file"); // Assuming you're using 'file' as the field name for uploads
-
-// Middleware wrapper to handle multer errors consistently
+// Initialize Multer with dynamic storage
 const uploadMiddleware = asyncHandler(async (req, res, next) => {
+  const upload = multer({
+    storage: getStorage(req), // Use dynamic storage based on URL
+    limits: { fileSize: 5 * 1024 * 1024 }, // General limit for all file uploads (5MB)
+    fileFilter,
+  }).single("file");
+
   upload(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       // Handle multer-specific errors (e.g., file size limit exceeded)
@@ -57,7 +89,5 @@ const uploadMiddleware = asyncHandler(async (req, res, next) => {
     next();
   });
 });
-
-module.exports = uploadMiddleware;
 
 module.exports = uploadMiddleware;
