@@ -9,18 +9,22 @@ const DataSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["picture", "ai_answer", "file"],
+    enum: ["file", "ai_package"],
     required: true,
   },
   content: {
+    // General content (e.g., extracted text or AI response)
     type: String,
-    required: true,
   },
   fileInfo: {
     originalName: { type: String },
     mimeType: { type: String },
     size: { type: Number },
     cloudinaryId: { type: String },
+    url: { type: String }, // Cloudinary URL
+  },
+  aiSolution: {
+    type: String, // AI response solving the test
   },
   createdAt: {
     type: Date,

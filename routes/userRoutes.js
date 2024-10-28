@@ -12,10 +12,75 @@ const {
   getUserProfile,
   deleteProfilePicture,
   uploadProfilePicture,
+  uploadPackage,
 } = require("../controllers/userController");
 const upload = require("../middleware/uploadMiddleware");
 const uploadMiddleware = require("../middleware/uploadMiddleware");
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/user/upload-package:
+ *   post:
+ *     summary: Upload a package (PDF, extracted text, and AI solution)
+ *     tags: [User Data]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The PDF file to upload
+ *               extractedText:
+ *                 type: string
+ *                 description: The extracted text from the PDF
+ *               aiSolution:
+ *                 type: string
+ *                 description: The AI solution for the extracted text
+ *     responses:
+ *       201:
+ *         description: Package uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Package uploaded successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     pdf:
+ *                       type: object
+ *                       properties:
+ *                         originalName:
+ *                           type: string
+ *                         mimeType:
+ *                           type: string
+ *                         size:
+ *                           type: number
+ *                         url:
+ *                           type: string
+ *                     extractedText:
+ *                       type: string
+ *                     aiSolution:
+ *                       type: string
+ *       400:
+ *         description: Bad request
+ */
+router.post("/upload-package", protect, uploadMiddleware, uploadPackage);
 
 /**
  * @swagger
@@ -157,7 +222,7 @@ router.get("/profile", protect, getUserProfile); // Add route for fetching user 
  * @swagger
  * /api/user:
  *   get:
- *     summary: Retrieve all user data
+ *     summary: Retrieve all user data (files, AI answers, and packages)
  *     tags:
  *       - User Data
  *     security:
@@ -165,6 +230,77 @@ router.get("/profile", protect, getUserProfile); // Add route for fetching user 
  *     responses:
  *       200:
  *         description: List of user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     files:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           fileInfo:
+ *                             type: object
+ *                             properties:
+ *                               originalName:
+ *                                 type: string
+ *                               mimeType:
+ *                                 type: string
+ *                               size:
+ *                                 type: number
+ *                               url:
+ *                                 type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                     aiAnswers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                     packages:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           pdf:
+ *                             type: object
+ *                             properties:
+ *                               originalName:
+ *                                 type: string
+ *                               mimeType:
+ *                                 type: string
+ *                               size:
+ *                                 type: number
+ *                               url:
+ *                                 type: string
+ *                           extractedText:
+ *                             type: string
+ *                           aiSolution:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
  *       400:
  *         description: Bad request
  */

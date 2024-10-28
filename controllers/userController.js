@@ -45,9 +45,6 @@ exports.createData = asyncHandler(async (req, res) => {
 });
 
 // Get user profile
-
-// userController.js
-
 exports.getUserProfile = asyncHandler(async (req, res) => {
   const cacheKey = `userProfile:${req.user._id}`;
   let profile = await redisClient.get(cacheKey);
@@ -125,28 +122,58 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
 // Get all user data
 exports.getUserData = asyncHandler(async (req, res) => {
-  // Check if the data is in cache
   const cacheKey = `userData:${req.user._id}`;
-  let data = await redisClient.get(cacheKey);
+  let userData = await redisClient.get(cacheKey);
 
-  if (data) {
-    // Data is in cache, parse and return it
-    data = JSON.parse(data);
+  if (userData) {
+    userData = JSON.parse(userData);
   } else {
-    // If not in cache, fetch from database and cache it
-    data = await Data.find({ userId: req.user._id }).lean();
-    if (data && data.length > 0) {
-      await redisClient.set(cacheKey, JSON.stringify(data), {
-        EX: 600, // Cache for 10 minutes
-      });
-    }
-  }
-  // If no data is found, throw a NotFoundError
-  if (!data || data.length === 0) {
-    throw new NotFoundError("No data found for the user");
+    // Fetch files, AI answers, and packages associated with the user
+    const dataRecords = await Data.find({ userId: req.user._id }).lean();
+
+    // Organize data into categories
+    const files = dataRecords
+      .filter((data) => data.type === "file")
+      .map((file) => ({
+        id: file._id,
+        content: file.content,
+        fileInfo: file.fileInfo,
+        createdAt: file.createdAt,
+      }));
+
+    const aiAnswers = dataRecords
+      .filter((data) => data.type === "ai_answer")
+      .map((answer) => ({
+        id: answer._id,
+        content: answer.content,
+        createdAt: answer.createdAt,
+      }));
+
+    const packages = dataRecords
+      .filter((data) => data.type === "ai_package")
+      .map((pkg) => ({
+        id: pkg._id,
+        pdf: pkg.fileInfo,
+        extractedText: pkg.content,
+        aiSolution: pkg.aiSolution,
+        createdAt: pkg.createdAt,
+      }));
+
+    // Structure the response data
+    userData = {
+      files,
+      aiAnswers,
+      packages, // Includes the package data in the response
+    };
+
+    // Cache the data for 1 minute to allow for updates
+    await redisClient.set(cacheKey, JSON.stringify(userData), "EX", 60);
   }
 
-  res.status(200).json({ success: true, data });
+  res.status(200).json({
+    success: true,
+    data: userData,
+  });
 });
 
 // Update data
@@ -358,5 +385,47 @@ exports.deleteProfilePicture = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Profile picture deleted successfully",
+  });
+});
+
+exports.uploadPackage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new BadRequestError("No PDF file uploaded");
+  }
+
+  const { extractedText, aiSolution } = req.body;
+
+  // Check for both extracted text and AI solution
+  if (!extractedText || !aiSolution) {
+    throw new BadRequestError("Extracted text and AI solution are required");
+  }
+
+  // Upload PDF to Cloudinary
+  const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+    folder: "user_tests",
+    resource_type: "raw", // For non-image files
+  });
+
+  // Create a new data entry as a package
+  const packageData = new Data({
+    userId: req.user._id,
+    type: "ai_package",
+    content: extractedText, // Store extracted text as main content
+    fileInfo: {
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      cloudinaryId: uploadResult.public_id,
+      url: uploadResult.secure_url,
+    },
+    aiSolution,
+  });
+
+  await packageData.save();
+
+  res.status(201).json({
+    success: true,
+    message: "Package uploaded successfully",
+    data: packageData,
   });
 });
