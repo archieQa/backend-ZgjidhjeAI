@@ -1,12 +1,12 @@
 require("./config/instrument");
 const express = require("express");
+const cors = require("cors"); // Import CORS
 const dotenv = require("dotenv");
 const connectDB = require("./config/config");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const errorHandler = require("./utils/errorHandler");
 const paymentRoutes = require("./routes/paymentRoutes");
-const config = require("./config/index");
 const apiLimiter = require("./middleware/rateLimiter");
 const logger = require("./utils/logger");
 const Sentry = require("@sentry/node");
@@ -15,6 +15,9 @@ const swaggerDocs = require("./config/swaggerConfig");
 const helmet = require("helmet");
 // Initialize Express
 const app = express();
+
+app.use(cors({ origin: "http://localhost:5173" })); // Allow requests from frontend
+
 app.use(express.json());
 
 app.use(helmet()); // Add security headers
@@ -52,7 +55,7 @@ app.use((err, req, res, next) => {
 app.use(errorHandler);
 
 // Start the server
-const PORT = config.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

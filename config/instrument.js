@@ -1,9 +1,8 @@
 const Sentry = require("@sentry/node");
 const { nodeProfilingIntegration } = require("@sentry/profiling-node");
-const config = require("./index");
 // Ensure to call this before requiring any other modules!
 Sentry.init({
-  dsn: config.SENTRY_DSN,
+  dsn: process.env.SENTRY_DSN,
   integrations: [
     // Add our Profiling integration
     nodeProfilingIntegration(),

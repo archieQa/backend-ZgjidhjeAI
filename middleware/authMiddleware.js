@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const config = require("../config/index");
 const { UnauthorizedError, NotFoundError } = require("../utils/customErrors");
 const asyncHandler = require("./asyncHandler");
 
@@ -12,7 +11,7 @@ const protect = asyncHandler(async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-    const decoded = jwt.verify(token, config.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find user and exclude the password field
     const user = await User.findById(decoded.id).select("-password");

@@ -1,5 +1,5 @@
 const express = require("express");
-const passport = require("../services/oauthService");
+// const passport = require("../services/oauthService");
 const { registerUser, loginUser } = require("../controllers/authController");
 const { InternalServerError } = require("../utils/customErrors");
 const { body } = require("express-validator");
@@ -130,6 +130,8 @@ router.post(
 router.post("/login", loginUser);
 
 // Google OAuth routes
+
+/**
 router.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -182,5 +184,6 @@ router.get(
     }
   }
 );
+*/
 
 module.exports = router;

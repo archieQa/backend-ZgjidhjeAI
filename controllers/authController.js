@@ -1,9 +1,8 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const { OAuth2Client } = require("google-auth-library");
-const { Strategy: GitHubStrategy } = require("passport-github2");
-const config = require("../config/index");
+//const { OAuth2Client } = require("google-auth-library");
+//const { Strategy: GitHubStrategy } = require("passport-github2");
 const { BadRequestError, UnauthorizedError } = require("../utils/customErrors");
 const asyncHandler = require("../middleware/asyncHandler");
 

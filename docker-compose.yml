@@ -1,0 +1,14 @@
+
+services: # Define services to run in the setup
+
+  backend: # Service name for the backend application
+    build: # Instructions for building the backend image
+      context: . # Set the build context to the current directory
+      dockerfile: Dockerfile # Specify the Dockerfile to use
+    ports:
+      - "5000:5000" # Map container port 5000 to host port 5000
+    env_file:
+      - .env # Load environment variables from the .env file
+    volumes:
+      - .:/app # Mount current directory to /app in the container for development
+    command: ["node", "app.js"] # Start the backend with node app.js

@@ -1,7 +1,7 @@
+/**
 const Stripe = require("stripe");
 const User = require("../models/User");
 const dotenv = require("dotenv");
-const config = require("../config/index");
 const {
   NotFoundError,
   BadRequestError,
@@ -10,7 +10,11 @@ const {
 
 dotenv.config();
 
-const stripe = Stripe(config.STRIPE_SECRET_KEY);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("Stripe secret key is missing");
+}
 
 // Create Stripe Subscription
 exports.createSubscription = async (req, res, next) => {
@@ -70,3 +74,4 @@ exports.createSubscription = async (req, res, next) => {
     );
   }
 };
+*/

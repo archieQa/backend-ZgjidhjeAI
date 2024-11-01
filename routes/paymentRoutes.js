@@ -1,6 +1,6 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
-const { createSubscription } = require("../services/stripeService");
+// const { createSubscription } = require("../services/stripeService");
 
 const router = express.Router();
 
@@ -31,6 +31,8 @@ const router = express.Router();
  *       404:
  *         description: User not found
  */
-router.post("/subscribe", protect, createSubscription);
 
+/*
+router.post("/subscribe", protect, createSubscription);
+*/
 module.exports = router;
