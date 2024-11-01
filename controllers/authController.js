@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const { BadRequestError, UnauthorizedError } = require("../utils/customErrors");
 const asyncHandler = require("../middleware/asyncHandler");
 
-const generateToken = (id, expiresIn = "1h") => {
+const generateToken = (id, expiresIn = "3h") => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn, // Use a shorter token expiration
   });

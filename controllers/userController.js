@@ -344,7 +344,7 @@ exports.uploadPackage = asyncHandler(async (req, res) => {
 
   // Upload PDF to Cloudinary
   const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-    folder: "user_tests",
+    folder: "user_packages",
     resource_type: "raw", // For non-image files
   });
 
