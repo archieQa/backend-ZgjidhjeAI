@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/config");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const tutorRoutes = require("./routes/tutorRoutes");
 const errorHandler = require("./utils/errorHandler");
 const paymentRoutes = require("./routes/paymentRoutes");
 const apiLimiter = require("./middleware/rateLimiter");
@@ -40,6 +41,7 @@ connectDB();
 // Routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/auth", authRoutes);
+app.use("/api/tutors", tutorRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/payment", paymentRoutes);
 

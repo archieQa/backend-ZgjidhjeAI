@@ -8,6 +8,7 @@ const {
   updateItem,
   deleteItem,
   getAllUserItems,
+  useAiPrompt,
 } = require("../controllers/userController");
 const upload = require("../middleware/uploadMiddleware");
 const uploadMiddleware = require("../middleware/uploadMiddleware");
@@ -394,5 +395,37 @@ router.put("/item/:id", protect, uploadMiddleware, updateItem);
  *         description: Item not found
  */
 router.delete("/item/:id", protect, deleteItem);
-
+/**
+ * @swagger
+ * /api/user/use-ai-prompt:
+ *   post:
+ *     summary: Use an AI prompt and deduct a token
+ *     tags: [AI Service]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI prompt used successfully, token deducted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "AI prompt sent successfully. Token deducted."
+ *                 tokensLeft:
+ *                   type: integer
+ *                   example: 4
+ *       403:
+ *         description: Daily token limit reached
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/use-ai-prompt", protect, useAiPrompt);
 module.exports = router;
