@@ -10,6 +10,7 @@ const validateRequest = require("../middleware/validateRequest");
 const router = express.Router();
 const resourceRoutes = require("./resourceRoutes");
 const { protect } = require("../middleware/authMiddleware");
+const blogRoutes = require("./blogRoutes");
 
 /**
  * @swagger
@@ -84,6 +85,8 @@ router.post("/register", registerTutor);
 router.post("/login", loginTutor);
 // Include resource routes
 router.use("/resources", resourceRoutes);
+// Mount blog routes under /api/tutors/blogs
+router.use("/blogs", blogRoutes);
 /**
  * @swagger
  * /api/tutors/me:
