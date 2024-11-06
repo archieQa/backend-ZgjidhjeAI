@@ -3,7 +3,11 @@
 const Tutor = require("../models/Tutor");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const { BadRequestError, UnauthorizedError } = require("../utils/customErrors");
+const {
+  BadRequestError,
+  UnauthorizedError,
+  NotFoundError,
+} = require("../utils/customErrors");
 const asyncHandler = require("../middleware/asyncHandler");
 
 // Generate JWT Token for tutor authentication
@@ -74,4 +78,27 @@ exports.loginTutor = asyncHandler(async (req, res) => {
   } else {
     throw new UnauthorizedError("Invalid credentials");
   }
+});
+
+// Get all details of the authenticated tutor
+exports.getAuthenticatedTutorDetails = asyncHandler(async (req, res) => {
+  if (!req.user || req.userType !== "tutor") {
+    throw new NotFoundError("Authenticated tutor not found");
+  }
+
+  const tutorDetails = {
+    id: req.user._id,
+    name: req.user.name,
+    subject: req.user.subject,
+    expertise: req.user.expertise,
+    yearsExperience: req.user.yearsExperience,
+    rating: req.user.rating,
+    description: req.user.description,
+    imageUrl: req.user.imageUrl,
+  };
+
+  res.status(200).json({
+    success: true,
+    tutor: tutorDetails,
+  });
 });
