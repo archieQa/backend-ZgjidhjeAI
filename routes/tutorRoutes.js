@@ -11,6 +11,7 @@ const router = express.Router();
 const resourceRoutes = require("./resourceRoutes");
 const { protect } = require("../middleware/authMiddleware");
 const blogRoutes = require("./blogRoutes");
+const learningPathRoutes = require("./learningPathRoutes");
 
 /**
  * @swagger
@@ -87,6 +88,7 @@ router.post("/login", loginTutor);
 router.use("/resources", resourceRoutes);
 // Mount blog routes under /api/tutors/blogs
 router.use("/blogs", blogRoutes);
+router.use("/learning-paths", learningPathRoutes);
 /**
  * @swagger
  * /api/tutors/me:
