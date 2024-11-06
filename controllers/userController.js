@@ -158,7 +158,7 @@ exports.getUserData = asyncHandler(async (req, res) => {
 });
 
 // Update data
-exports.updateData = asyncHandler(async (req, res) => {
+/* exports.updateData = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { content } = req.body;
 
@@ -179,7 +179,7 @@ exports.updateData = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ success: true, data });
-});
+}); */
 
 // Delete data
 exports.deleteData = asyncHandler(async (req, res) => {
@@ -369,5 +369,256 @@ exports.uploadPackage = asyncHandler(async (req, res) => {
     success: true,
     message: "Package uploaded successfully",
     data: packageData,
+  });
+});
+
+//*  This are the new routes for this backend   *//
+
+exports.getUserProfileCompact = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .select("username email tokensLeft profilePictureUrl plan lastReset")
+    .lean();
+
+  if (!user) {
+    throw new NotFoundError("User profile not found");
+  }
+
+  if (user.plan === "premium") {
+    user.tokensLeft = "Infinite Tokens";
+    user.nextRefillTime = "You don't need token refill; you're rich!";
+  } else {
+    // Calculate exact time remaining until next refill
+    const now = new Date();
+    const nextRefillTimestamp = user.lastReset.getTime() + 24 * 60 * 60 * 1000;
+    const timeUntilRefill = nextRefillTimestamp - now;
+
+    if (timeUntilRefill > 0) {
+      const hoursUntilRefill = Math.floor(timeUntilRefill / (1000 * 60 * 60));
+      const minutesUntilRefill = Math.floor(
+        (timeUntilRefill % (1000 * 60 * 60)) / (1000 * 60)
+      );
+      user.nextRefillTime = `Your tokens will be refilled in ${hoursUntilRefill} hours and ${minutesUntilRefill} minutes.`;
+    } else {
+      user.nextRefillTime = "Your tokens have been refilled.";
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    profile: {
+      username: user.username,
+      email: user.email,
+      tokensLeft: user.tokensLeft,
+      nextRefillTime: user.nextRefillTime,
+      plan: user.plan,
+      profilePictureUrl: user.profilePictureUrl,
+    },
+  });
+});
+
+exports.getItemDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const item = await Data.findOne({ _id: id, userId: req.user._id })
+    .select("content fileInfo aiSoultion")
+    .lean();
+
+  if (!item) {
+    throw new NotFoundError("Item not found");
+  }
+
+  const itemDetails = {
+    id: item._id.toString(),
+    question: item.content || null,
+    uploadedFile: item.fileInfo
+      ? {
+          fileName: item.fileInfo.originalName,
+          fileUrl: item.fileInfo.url,
+        }
+      : null,
+
+    extractedText: item.content || null,
+    aiAnswer: item.aiSolution || null,
+  };
+
+  res.status(200).json({
+    success: true,
+    itemDetails,
+  });
+});
+
+exports.createItem = asyncHandler(async (req, res) => {
+  const { question, extractedText, aiAnswer } = req.body;
+  const file = req.file;
+
+  // Validate
+
+  if (!question && !file) {
+    throw new BadRequestError("Question or file is required");
+  }
+
+  // Define file dets if the file is uploaded
+
+  const fileInfo = file
+    ? {
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        cloudinaryId: file.filename,
+        url: file.path, // Path or URL
+      }
+    : null;
+
+  const newItem = new Data({
+    userId: req.user._id,
+    type: "file", // or other type as applicable
+    content: question,
+    fileInfo,
+    aiSolution: aiAnswer,
+  });
+
+  await newItem.save();
+
+  // Respond with the created item structure
+  res.status(201).json({
+    success: true,
+    item: {
+      id: newItem._id.toString(),
+      question: newItem.content,
+      uploadedFile: fileInfo
+        ? {
+            fileName: fileInfo.originalName,
+            fileUrl: fileInfo.url,
+          }
+        : null,
+      extractedText: extractedText || null,
+      aiAnswer: newItem.aiSolution,
+    },
+  });
+});
+
+exports.updateItem = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { question, extractedText, aiAnswer } = req.body;
+  const file = req.file;
+
+  // Find the item
+  const item = await Data.findOne({ _id: id, userId: req.user._id });
+  if (!item) {
+    throw new NotFoundError("Item not found");
+  }
+
+  // Update fields only if provided
+  if (question) item.content = question;
+  if (extractedText) item.content = extractedText;
+  if (aiAnswer) item.aiSolution = aiAnswer;
+
+  // If a file is uploaded, update file information
+  if (file) {
+    item.fileInfo = {
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      cloudinaryId: file.filename,
+      url: file.path,
+    };
+  }
+
+  await item.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Item updated successfully",
+    item: {
+      id: item._id.toString(),
+      question: item.content,
+      uploadedFile: item.fileInfo
+        ? {
+            fileName: item.fileInfo.originalName,
+            fileUrl: item.fileInfo.url,
+          }
+        : null,
+      extractedText: extractedText || null,
+      aiAnswer: item.aiSolution,
+    },
+  });
+});
+
+// Delete item by ID
+exports.deleteItem = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Find the item
+  const item = await Data.findOne({ _id: id, userId: req.user._id });
+  if (!item) {
+    throw new NotFoundError("Item not found");
+  }
+
+  // If the item has an associated file, delete it from Cloudinary (or similar storage)
+  if (item.fileInfo && item.fileInfo.cloudinaryId) {
+    await cloudinary.uploader.destroy(item.fileInfo.cloudinaryId);
+  }
+
+  await Data.findByIdAndDelete(id);
+
+  res.status(200).json({
+    success: true,
+    message: "Item deleted successfully",
+  });
+});
+
+// Get all items for authenticated user
+exports.getAllUserItems = asyncHandler(async (req, res) => {
+  const items = await Data.find({ userId: req.user._id })
+    .select("_id content fileInfo aiSolution createdAt")
+    .lean();
+
+  // Format items to match the structure specified
+  const formattedItems = items.map((item) => ({
+    id: item._id.toString(),
+    question: item.content || null,
+    uploadedFile: item.fileInfo
+      ? {
+          fileName: item.fileInfo.originalName,
+          fileUrl: item.fileInfo.url,
+        }
+      : null,
+    extractedText: item.content || null,
+    aiAnswer: item.aiSolution || null,
+    createdAt: item.createdAt,
+  }));
+
+  res.status(200).json({
+    success: true,
+    items: formattedItems,
+  });
+});
+
+// Handle AI prompt usage
+exports.useAiPrompt = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  // Ensure user is found and has tokens left
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  if (user.tokensLeft <= 0) {
+    return res.status(403).json({
+      success: false,
+      message: "Daily token limit reached. Please try again tomorrow.",
+    });
+  }
+
+  // Deduct 1 token
+  user.tokensLeft -= 1;
+
+  // Save updated user data
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "AI prompt sent successfully. Token deducted.",
+    tokensLeft: user.tokensLeft,
   });
 });
